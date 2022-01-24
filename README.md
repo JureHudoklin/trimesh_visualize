@@ -1,2 +1,2 @@
 # trimesh_visualize
-A wrapper for trimesh that simplifies vosualization.
+A wrapper for trimesh that simplifies visualization.
