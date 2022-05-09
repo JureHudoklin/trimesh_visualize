@@ -4,10 +4,10 @@ import matplotlib.pyplot as plt
 import shapely
 import random
 import string
-
 import os
 import io
 import PIL.Image as Image
+
 
 def id_generator(size=6, chars=list('0123456789')):
     return ''.join(np.random.choice(chars, size=size))
@@ -29,7 +29,7 @@ def id_generator(base = ""):
         for _ in range(8))
     return id
 
-class TrimeshVisualize():
+class Scene():
     def __init__(self):
         self.meshes = {}
 
@@ -37,12 +37,17 @@ class TrimeshVisualize():
         """
         Plots all the meshes that were cached.
         --------------
-        clear_meshes : Bool
-            If true resets all the cashed meshes after plotting
-        
-        Return
+        Keyword Arguments:
+            - my_scene : trimesh.Scene {defult: None}
+                If provided, the scene is updated with the meshes
+            - clear_meshes : Bool
+                If true resets all the cashed meshes after plotting
+            - add_lights : Bool
+                If true adds lights to the scene
+        Return:
         --------------
-        None : None
+            - new_scene : trimesh.Scene
+                Updated trimesh scene with the objects/features
         """
         # Create the scene
         if my_scene == None:
@@ -65,6 +70,8 @@ class TrimeshVisualize():
 
         if clear_meshes == True:
             self.meshes = []
+
+        return my_scene
 
     def plot_point(self, point, color=[255, 0, 0, 255], radius=1, id = None):
         """
@@ -305,3 +312,21 @@ class TrimeshVisualize():
 
         return id
 
+    def remove_feature(self, id):
+        """
+        Removes a feature from the viewer
+        --------------
+        Arguments:
+            - id : string
+                Id of the feature to be removed
+        Return:
+        --------------
+            - success : bool
+                True if feature was removed, False otherwise
+        """
+
+        if id in self.meshes:
+            del self.meshes[id]
+            return True
+        else:
+            return False
