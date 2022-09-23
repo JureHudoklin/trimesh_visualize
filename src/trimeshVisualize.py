@@ -53,7 +53,7 @@ class Scene():
         if my_scene == None:
             my_scene = trimesh.scene.scene.Scene(self.meshes)
         else:
-            for mesh in self.meshes:
+            for mesh in self.meshes.values():
                 my_scene.add_geometry(mesh)
 
         # Add a specific light
@@ -243,7 +243,7 @@ class Scene():
             self.meshes[id] = cylinder
 
 
-    def plot_grasp(self, grasp_tf, score=1, units="millimeters"):
+    def plot_grasp(self, grasp_tf, score=1, units="millimeters", color = [0, 0, 255, 255]):
         """
         Given grasp transform matrices and their score, plots the grasp
         --------------
@@ -257,11 +257,20 @@ class Scene():
             None : None
         """
 
+        if not isinstance(grasp_tf, np.ndarray):
+            try:
+                grasp_tf = np.array(grasp_tf)
+            except:
+                raise ValueError("grasp_tf must be a numpy array")
+
         if units == "millimeters":
-            length_coef = 10
-        else:
             length_coef = 0.01
-        if len(grasp_tf) == 1:
+        else:
+            length_coef = 10
+            
+        if grasp_tf.ndim == 2:
+            if round(score, 4) == 0:
+                return None
             grasp_point = np.array([0, 0, 0])
             grasp_dir = np.array([0, 0, length_coef*3*score])
             points_transformed = trimesh.transform_points(
@@ -269,9 +278,9 @@ class Scene():
             grasp_point = np.array(points_transformed[0])
             grasp_dir = np.array(points_transformed[1])
             id = self.plot_vector(grasp_point, grasp_dir,
-                             radius_cyl=length_coef/10, arrow=False)
+                             radius_cyl=length_coef/10, arrow=False, color=color)
             return id
-        else:
+        elif grasp_tf.ndim == 3:
             ids = []
             for i in range(len(grasp_tf)):
                 if round(score[i], 4) == 0:
@@ -283,7 +292,7 @@ class Scene():
                 grasp_point = np.array(points_transformed[0])
                 grasp_dir = np.array(points_transformed[1])
                 id = self.plot_vector(grasp_point, grasp_dir,
-                                 radius_cyl=length_coef/10, arrow=False)
+                                 radius_cyl=length_coef/10, arrow=False, color=color)
                 ids.append(id)
             return ids
             
