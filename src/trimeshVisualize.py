@@ -356,7 +356,30 @@ class Scene():
                                  radius_cyl=length_coef/10, arrow=False, color=color)
                 ids.append(id)
             return ids
-            
+
+    def plot_rays(self, start_points, end_points, color=[0, 0, 0, 255], id = None):
+        """
+        Plots rays from start_points to end_points
+        --------------
+        Arguments:
+            start_points : np.array(n,3)
+                3D coordinates of start points
+            end_points : np.array(n,3)
+                3D coordinates of end points
+                color : list [4]
+        Return:
+        --------------
+        id : str
+        """
+        segments = np.stack([start_points, end_points], axis=1) # (n, 2, 3)
+        colors = np.tile(color, (len(segments), 1)) # (n, 4)
+        lines = trimesh.load_path(segments, colors=colors)
+        
+        if id is None:
+            id = id_generator("ray_")
+        self.meshes[id] = lines
+
+        return id      
 
     def plot_coordinate_system(self, tf=None, scale=1, id = None):
         """
