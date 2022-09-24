@@ -88,7 +88,7 @@ class Scene():
         
         Return
         --------------
-        None : None
+        id : str
         """
         if id is None:
             id = id_generator("point_")
@@ -96,6 +96,8 @@ class Scene():
         mesh_point.apply_translation(point)
         mesh_point.visual.face_colors = color
         self.meshes[id] = mesh_point
+
+        return id
 
     def plot_point_multiple(self, points, color=[255, 0, 0, 255], radius=0.5):
         """
@@ -119,6 +121,7 @@ class Scene():
             mesh_point.visual.face_colors = color
             self.meshes[id] = mesh_point
 
+
     def plot_point_cloud(self, pc, color=[255, 0, 0, 255], radius=0.5, id = None):
         """
         Plots a point cloud
@@ -134,12 +137,70 @@ class Scene():
         
         Return:
         --------------
-        None : None
+        id : str
         """
         if id is None:
             id = id_generator("pc_")
         pc_mesh = trimesh.points.PointCloud(pc, colors=color, radius=radius)
         self.meshes[id] = pc_mesh
+
+        return id
+
+    def plot_cone(self, height, radius,
+                tf = None, 
+                point = None,
+                direction = None,
+                from_base = True,
+                color = [255, 0, 0, 255],
+                id = None):
+        """
+        Plots a cone.
+        --------------
+        height : int
+            Height of the cone.
+        radius : int
+            Radius of the cone base
+        tf : np.array() [4, 4]
+            4x4 tf matrix. 
+        point : np.array() [3]
+            Location of the cone top. {Can be provided instead of tf.}
+        direction : np.array() [3]
+            Vector pointing from cone top to the base. {Can be provided instead of tf.}
+        from_base : bool {defult: True}
+            If true, the cone is plotted from the base. Otherwise, it is plotted from the top.
+        color : array(4,)
+            Color of the point: [R,G,B, Intensity]
+        id : string {defult:cone_...}
+            ID of the cone cloud
+        
+        Return:
+        --------------
+        id : str
+        """
+
+        id = id_generator("cone_")
+        cone = trimesh.creation.cone(radius=radius, height=height)
+        cone.visual.face_colors = color
+        if from_base == False:
+            cone.apply_translation([0, 0, -height])
+            cone.apply_transform(trimesh.transformations.rotation_matrix(np.pi, [1, 0, 0]))
+
+        if tf is not None:
+            cone_tf = tf
+                
+            
+        elif point is not None and direction is not None:
+            tf = trimesh.geometry.align_vectors(np.array([0, 0, 1]), direction)
+            tf[:3, 3] = point
+            cone_tf = tf
+            
+        else:
+            raise ValueError("Transformation matrix or point and direction must be provided.")
+            
+        cone.apply_transform(cone_tf)
+        self.meshes[id] = cone
+
+        return id
 
     def plot_mesh(self, mesh, color=[150, 150, 150, 255], **kwargs):
         """
