@@ -29,6 +29,36 @@ def id_generator(base = ""):
         for _ in range(8))
     return id
 
+def color_resolver(color):
+    color_dict = {"red": [255, 0, 0, 255],
+                  "green": [0, 255, 0, 255],
+                  "blue": [0, 0, 255, 255],
+                  "yellow": [255, 255, 0, 255],
+                  "cyan": [0, 255, 255, 255],
+                  "magenta": [255, 0, 255, 255],
+                  "white": [255, 255, 255, 255],
+                  "black": [0, 0, 0, 255],
+                  "gray": [128, 128, 128, 255],
+                  }
+    if color == None:
+        color = [0, 0, 0, 255]
+    elif type(color) == str:
+        color = color_dict.get(color, None)
+        if color == None:
+            raise ValueError("Color must be a string from the list: " + str(list(color_dict.keys())))
+    elif type(color) == list:
+        if len(color) == 3:
+            color.append(255)
+        elif len(color) == 4:
+            pass
+        else:
+            raise ValueError("Color must be a list of 3 or 4 elements")
+    else:
+        raise ValueError("Color must be a string or a list")
+    
+    return color
+        
+
 class Scene():
     def __init__(self):
         self.meshes = {}
@@ -73,7 +103,7 @@ class Scene():
 
         return my_scene
 
-    def plot_point(self, point, color=[255, 0, 0, 255], radius=1, id = None):
+    def plot_point(self, point, color=[0, 0, 0, 255], radius=0.001, id = None):
         """
         Plots a point 
         --------------
@@ -99,7 +129,7 @@ class Scene():
 
         return id
 
-    def plot_point_multiple(self, points, color=[255, 0, 0, 255], radius=0.5):
+    def plot_point_multiple(self, points, color=[0, 0, 0, 255], radius=0.001):
         """
         Plots points
         --------------
@@ -118,11 +148,11 @@ class Scene():
             id = id_generator("point_")
             mesh_point = trimesh.primitives.Sphere(radius=radius)
             mesh_point.apply_translation(point)
-            mesh_point.visual.face_colors = color
+            mesh_point.visual.face_colors = color_resolver(color)
             self.meshes[id] = mesh_point
 
 
-    def plot_point_cloud(self, pc, color=[255, 0, 0, 255], radius=0.5, id = None):
+    def plot_point_cloud(self, pc, tf = None, color=[0, 0, 0, 255], radius=0.001, id = None):
         """
         Plots a point cloud
         --------------
@@ -141,7 +171,9 @@ class Scene():
         """
         if id is None:
             id = id_generator("pc_")
-        pc_mesh = trimesh.points.PointCloud(pc, colors=color, radius=radius)
+        if tf is not None:
+            pc = tf.dot(np.vstack((pc.T, np.ones(pc.shape[0])))).T[:, :3]
+        pc_mesh = trimesh.points.PointCloud(pc, colors=color_resolver(color), radius=radius)
         self.meshes[id] = pc_mesh
 
         return id
@@ -151,7 +183,7 @@ class Scene():
                 point = None,
                 direction = None,
                 from_base = True,
-                color = [255, 0, 0, 255],
+                color = [150, 150, 150, 255],
                 id = None):
         """
         Plots a cone.
@@ -180,7 +212,7 @@ class Scene():
 
         id = id_generator("cone_")
         cone = trimesh.creation.cone(radius=radius, height=height)
-        cone.visual.face_colors = color
+        cone.visual.face_colors = color_resolver(color)
         if from_base == False:
             cone.apply_translation([0, 0, -height])
             cone.apply_transform(trimesh.transformations.rotation_matrix(np.pi, [1, 0, 0]))
@@ -202,7 +234,7 @@ class Scene():
 
         return id
 
-    def plot_mesh(self, mesh, color=[150, 150, 150, 255], **kwargs):
+    def plot_mesh(self, mesh, tf = None, color=[150, 150, 150, 255], **kwargs):
         """
         Plots the mesh given a trimesh mesh
         --------------
@@ -229,6 +261,9 @@ class Scene():
         if "units" in kwargs:   # Convert mesh to correct units
             mesh.units = kwargs["units"][0]
             mesh.convert_units(kwargs["units"][1])
+            
+        if tf is not None:
+            mesh.apply_transform(tf)
 
         if "id" in kwargs:
             id = kwargs["id"]
@@ -238,11 +273,11 @@ class Scene():
         # Unmerge so viewer doesn't smooth
         mesh.unmerge_vertices()
         # Assign color
-        mesh.visual.face_colors = color
+        mesh.visual.face_colors = color_resolver(color)
         # Append to meshes
         self.meshes[id] = mesh
 
-    def plot_vector(self, p1, p2, color=[0, 0, 0, 255], radius_cyl=0.6, arrow=True, id = None):
+    def plot_vector(self, p1, p2, color=[0, 0, 0, 255], radius_cyl=0.006, arrow=True, id = None):
         """
         Plats a vector from point 1 to point 2
         --------------
@@ -264,6 +299,7 @@ class Scene():
         --------------
         None : None
         """
+        color = color_resolver(color)
         vector = p2-p1
         length = np.linalg.norm(p2-p1)
         if length < 0.0001:
@@ -304,7 +340,7 @@ class Scene():
             self.meshes[id] = cylinder
 
 
-    def plot_grasp(self, grasp_tf, score=1, units="millimeters", color = [0, 0, 255, 255]):
+    def plot_grasp(self, grasp_tf, score=1, units="millimeters", color = [0, 0, 0, 255]):
         """
         Given grasp transform matrices and their score, plots the grasp
         --------------
@@ -329,6 +365,7 @@ class Scene():
         else:
             length_coef = 10
             
+        color = color_resolver(color)
         if grasp_tf.ndim == 2:
             if round(score, 4) == 0:
                 return None
@@ -371,6 +408,7 @@ class Scene():
         --------------
         id : str
         """
+        color = color_resolver(color)
         segments = np.stack([start_points, end_points], axis=1) # (n, 2, 3)
         colors = np.tile(color, (len(segments), 1)) # (n, 4)
         lines = trimesh.load_path(segments, colors=colors)
@@ -381,7 +419,7 @@ class Scene():
 
         return id      
 
-    def plot_coordinate_system(self, tf=None, scale=1, id = None):
+    def plot_coordinate_system(self, tf=None, scale=0.01, id = None):
         """
         Plot a coordinate system given a transformation matrix and a scale
         --------------

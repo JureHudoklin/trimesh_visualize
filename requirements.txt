@@ -1,6 +1,6 @@
 numpy
 scipy
 trimesh
-Shapely
-pyglet
+shapely
+pyglet<=1.5
 matplotlib
