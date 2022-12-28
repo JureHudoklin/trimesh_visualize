@@ -40,24 +40,30 @@ def color_resolver(color):
                   "black": [0, 0, 0, 255],
                   "gray": [128, 128, 128, 255],
                   }
+    
     if color == None:
-        color = [0, 0, 0, 255]
-    elif type(color) == str:
+        return [0, 0, 0, 255]
+    
+    if type(color) == str:
         color = color_dict.get(color, None)
         if color == None:
             raise ValueError("Color must be a string from the list: " + str(list(color_dict.keys())))
-    elif type(color) == list:
-        if len(color) == 3:
-            color.append(255)
-        elif len(color) == 4:
-            pass
-        else:
-            raise ValueError("Color must be a list of 3 or 4 elements")
-    else:
-        raise ValueError("Color must be a string or a list")
+        return color
     
-    return color
+    if type(color) == list or type(color) == np.ndarray or type(color) == tuple:
+        color = np.array(color)
+        color_new = np.zeros(4)
+        color_new[-1] = 255
+        for i in range(len(color)):
+            clr = color[i]
+            if clr <= 1:
+                clr = clr * 255
+            color_new[i] = np.clip(clr, 0, 255)
+        color = color_new
+        return color
         
+    raise ValueError("Color must be a string or a list")
+
 
 class Scene():
     def __init__(self):
@@ -233,6 +239,57 @@ class Scene():
         self.meshes[id] = cone
 
         return id
+    
+    def plot_box(self, extents, tf = None, color = None, id = None):
+        """
+        Plots a box.
+        --------------
+        p1 : np.array() [3]
+            Location of the box corner.
+        p2 : np.array() [3]
+            Location of the box corner.
+        tg : np.array() [4, 4]
+            4x4 tf matrix. 
+        color : array(4,)
+            Color of the point: [R,G,B, Intensity]
+        id : string {defult:box_...}
+            ID of the box cloud
+        
+        Return:
+        --------------
+        id : str
+        """
+        id = id_generator("box_")
+        box = trimesh.creation.box(extents = extents)
+        if tf is not None:
+            box.apply_transform(tf)
+        if color is not None:
+            box.visual.face_colors = color_resolver(color)
+        self.meshes[id] = box
+
+        return id
+    
+    def plot_bounding_box(self, mesh, color = [0,0,0,100], id = None):
+        """
+        Plots the bounding box of the mesh
+        --------------
+        mesh : trimesh.Trimesh
+            Mesh to be plotted
+        color : array(4,)
+            Color of the point: [R,G,B, Intensity]
+        id : string {defult:bbox_...}
+            ID of the box cloud
+        
+        Return:
+        --------------
+        id : str
+        """
+        id = id_generator("bbox_")
+        box = mesh.bounding_box_oriented
+        box.visual.face_colors = color_resolver(color)
+        self.meshes[id] = box
+
+        return id
 
     def plot_mesh(self, mesh, tf = None, color=[150, 150, 150, 255], **kwargs):
         """
@@ -339,7 +396,6 @@ class Scene():
         else:
             self.meshes[id] = cylinder
 
-
     def plot_grasp(self, grasp_tf, score=1, units="millimeters", color = [0, 0, 0, 255]):
         """
         Given grasp transform matrices and their score, plots the grasp
@@ -408,10 +464,18 @@ class Scene():
         --------------
         id : str
         """
-        color = color_resolver(color)
+        #color = color_resolver(color)
+        end_points = end_points + np.random.normal(0, 0.00001, end_points.shape)
         segments = np.stack([start_points, end_points], axis=1) # (n, 2, 3)
-        colors = np.tile(color, (len(segments), 1)) # (n, 4)
-        lines = trimesh.load_path(segments, colors=colors)
+        
+        valid_seg = segments[:, 0, :] - segments[:, 1, :]
+        segments = segments[np.linalg.norm(valid_seg, axis=1) > 0.0001] # (n, 2, 3)
+
+        #colors = np.tile(color, (len(segments), 1)) # (n, 4)
+        try:
+            lines = trimesh.load_path(segments, colors=color)
+        except:
+            lines = trimesh.load_path(segments)
         
         if id is None:
             id = id_generator("ray_")
