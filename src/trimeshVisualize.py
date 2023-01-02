@@ -464,14 +464,26 @@ class Scene():
         --------------
         id : str
         """
-        #color = color_resolver(color)
+        if type(color) == str:
+            color = color_resolver(color)
+            
+        if type(color) != np.ndarray:
+            color = np.array(color)
+        
+        
         end_points = end_points + np.random.normal(0, 0.00001, end_points.shape)
         segments = np.stack([start_points, end_points], axis=1) # (n, 2, 3)
         
         valid_seg = segments[:, 0, :] - segments[:, 1, :]
         segments = segments[np.linalg.norm(valid_seg, axis=1) > 0.0001] # (n, 2, 3)
 
-        #colors = np.tile(color, (len(segments), 1)) # (n, 4)
+        if color.ndim == 1:
+            color = color_resolver(color)
+            color = np.tile(color, (len(segments), 1))
+        else:
+            for i in range(len(color)):
+                color[i] = color_resolver(color[i])
+            
         try:
             lines = trimesh.load_path(segments, colors=color)
         except:
