@@ -41,7 +41,7 @@ def color_resolver(color):
                   "gray": [128, 128, 128, 255],
                   }
     
-    if color == None:
+    if color is None:
         return [0, 0, 0, 255]
     
     if type(color) == str:
